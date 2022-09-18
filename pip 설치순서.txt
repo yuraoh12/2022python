@@ -1,0 +1,25 @@
+pip 설치
+
+관리자권한으로 명령 프롬프트를 킨다.
+curl https://boostrap.pypa.io/get-pip.py -o get-pip.py
+위와 같은 명령어를 입력한다.
+다운로드가 되었으면 설치하기 위해 아래와 같은 명령어를
+입력한다.
+python get-pip.py
+만약 python이 뭔지모른다 안깔려있다고 오류가 발생하는경우
+수업페이지 링크에서 python클릭해서 다운로드 받는다
+다른사람이 만들어논 모듈을 설치하는 명령어는
+pip
+명령 창에서 실행을 해주셔야합니다.
+명령창을 관리자 권한으로 열어주셔야합니다.
+
+만약에 pip이 깔려있는데fatal error in launcher unable to create process using 요 에러메세지가 나오면 아래처럼 업그레이드
+python -m pip install --upgrade pip
+python -m pip install numpy
+
+pip install 설치할 모듈이름
+pip install numpy
+pip uninstall 삭제할 모듈이름
+pip uninstall numpy
+pip install numpy==모듈의특정버전명
+pip install numpy==1.16.4
