@@ -1,72 +1,75 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
 import time
 
-# options = webdriver.ChromeOptions()
-# options.add_argument('headless')
+import requests as req
+from bs4 import BeautifulSoup
 
-# chrome_driver = 'C:/Users/taeji/Downloads/chrome-driver/chromedriver.exe'
+url = "https://news.naver.com/main/ranking/popularMemo.naver" # 전역변수(모든 함수가 공유하는 변수)
 
-# driver = webdriver.Chrome(chrome_driver, options=options)
+def set_url(url_param) : # 지역변수(해당 함수만 사용하는 변수)
+    global url
+    url = url_param
 
-# # 긁어갈 사이트 호출
-# driver.get("http://www.python.org")
+# 1. 특정 페이지로 요청보내서 html 문서 받아오기.
+def get_soup() :    
 
-# print(driver.title)
-# assert "Python" in driver.title # 테스트 코드
+    headers = {
+        'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
+    }
 
-# elem = driver.find_element(By.CLASS_NAME, "shrubbery") # name 속성으로 찾기
-# val = elem.get_attribute('class')
-# print(val)
-# elem = driver.find_element(By.CLASS_NAME, "q") # class 속성으로 찾기
-# elem = driver.find_element(By.ID, "q") # id 속성으로 찾기
-# elem = driver.find_element(By.TAG_NAME, "q") # 태그명으로 찾기
-# input 텍스트 초기화
-# elem.clear()
+    res = req.get(url, headers=headers); # url에 요청 보냄. 요청에 대한 응답이 리턴
 
-# # 마우스 클릭
-# elem.click()
-
-# # 키보드 엔터
-# elem.send_keys(Keys.RETURN)
+    html = res.text # 응답 결과의 문서
 
 
-# elem.clear()
-# elem.send_keys("pycon")
-# elem.send_keys(Keys.RETURN)
-# assert "No results found." not in driver.page_source
-# driver.close()
+    # find(태그이름 , 속성이름)
+    # find_all
+    # 체이닝
+    # 실제 정보 값 -> text
+    # 태그의 속성값 -> 태find(태그이름 , 속성이름)
+    # find_all
+    # 체이닝
+    # 실제 정보 값 -> text
+    # 태그의 속성값 -> 태그['속성명']
 
+    soup = BeautifulSoup(html, 'html.parser')
 
-options = webdriver.ChromeOptions()
-options.add_argument('headless')
+    return soup
 
-chrome_driver = 'C:/Users/taeji/Downloads/chrome-driver/chromedriver.exe'
+set_url('https://media.naver.com/press/056/ranking?type=comment')
+soup = get_soup()
 
-driver = webdriver.Chrome(chrome_driver, options=options)
+date = soup.find(class_='press_ranking_date')
+button = date.find(class_='button_date_prev')
 
-# 긁어갈 사이트 호출
-driver.get("https://media.naver.com/press/087/ranking?type=popular")
+# 한계 -> 동적 페이지는 스크랩할 수 없다.
 
-ranking_date = driver.find_element(By.CLASS_NAME, 'press_ranking_date')
-button = ranking_date.find_element(By.CLASS_NAME, 'button_date_prev')
-date = ranking_date.find_element(By.TAG_NAME, 'strong').text
+# 1. 크롬 드라이버 가져오기(크롬을 코드로 제어)
+driver = webdriver.Chrome('C:/Users/taeji/Downloads/chrome-driver/chromedriver.exe')
 
-print(button)
-print(date)
+# 2. 크롬 브라우저로 특정 주소 접속하기
+driver.get("https://media.naver.com/press/056/ranking?type=comment")
 
-button.click()
-time.sleep(0.5)
-date = ranking_date.find_element(By.TAG_NAME, 'strong').text
-print(date)
+def click_btn(target, sec, nav_param) :
+    element = WebDriverWait(target, sec).until(
+        EC.presence_of_element_located((nav_param['By'], nav_param['value'])
+    ))
 
-button.click()
-time.sleep(0.5)
-date = ranking_date.find_element(By.TAG_NAME, 'strong').text
-print(date)
+    element.click()
 
-# ranking_list = driver.find_element(By.CLASS_NAME, 'press_ranking_list')
-# ranking_list = ranking_list.find_elements(By.CLASS_NAME, 'as_thumb')
+nav_param = {
+    'By' : By.CLASS_NAME,
+    'value' : 'button_date_prev'
+}
+click_btn(driver, 10, nav_param)
+time.sleep(3)
+click_btn(driver, 10, nav_param)
+time.sleep(3)
+click_btn(driver, 10, nav_param)
+time.sleep(3)
 
-# print(ranking_list[0].find_element(By.TAG_NAME, 'a').get_attribute('href'))
