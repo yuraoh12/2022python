@@ -1,0 +1,14 @@
+<persons>
+    <person no=1>
+        <name>홍길동</name>
+        <age>22</age>
+    </person>
+    <person no=2>
+        <name>이순신</name>
+        <age>23</age>
+    </person>
+    <person id='kkk' no=3>
+        <name>황진이</name>
+        <age>24</age>
+    </person>
+</persons>
