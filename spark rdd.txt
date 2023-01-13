@@ -1,0 +1,1086 @@
+1. Spark SQL 개요
+1.1 zeppeln 설치
+다운로드 페이지
+다운로드 링크
+https://dlcdn.apache.org/zeppelin/zeppelin-0.10.1/zeppelin-0.10.1-bin-all.tgz
+작업 폴더로 이동
+cd work
+zeppelin 다운로드
+wget https://dlcdn.apache.org/zeppelin/zeppelin-0.10.1/zeppelin-0.10.1-bin-all.tgz --no-check-certificate
+압축 해제
+tar xvfz zeppelin-0.10.1-bin-all.tgz
+이름 변경
+mv zeppelin-0.10.1-bin-all zeppelin
+재플린 구동
+/work/zeppelin/bin/zeppelin-daemon.sh start
+재플린 사이트 설정
+/work/zeppelin/conf/zeppelin-site.template을 zeppelin-site.xml로 복사
+cp /work/zeppelin/conf/zeppelin-site.xml.template /work/zeppelin/conf/zeppelin-site.xml
+zeppelin-site.xml 아래와 같이 수정
+    <property>
+      <name>zeppelin.server.addr</name>
+      <value>0.0.0.0</value>
+      <description>Server binding address</description>
+    </property>
+
+    <property>
+      <name>zeppelin.server.port</name>
+      <value>9090</value>
+      <description>Server port.</description>
+    </property>
+cp /work/zeppelin/conf/zeppelin-env.sh.template /work/zeppelin/conf/zeppelin-env.sh
+zeppelin-env.sh 최하단에 아래 코드 추가
+  JAVA_HOME=/work/jdk8
+재플린 재구동
+/work/zeppelin/bin/zeppelin-daemon.sh restart
+웹브라우저에 spark-master-01:9090으로 접속
+1.2 zeppeln 설정
+우측 상단 anonymous 클릭 -> interpreter 선택 -> 검색창에 spark 검색 -> spark interpreter edit 버튼 클릭 -> 아래 설정값을 세팅
+spark
+SPARK_HOME : /work/spark32
+spark.app.name : MySparkApp
+PYSPARK_PYTHON : /usr/local/bin/python3.10
+PYSPARK_DRIVER_PYTHON : /usr/local/bin/python3.10
+spark_yarn
+우측 상단 +Create 버튼 클릭
+Interpreter Name : spark_yarn
+Interpreter group : spark
+아래 설정값 세팅
+SPARK_HOME : /work/spark32
+spark.app.name : MySparkApp
+PYSPARK_PYTHON : /usr/local/bin/python3.10
+PYSPARK_DRIVER_PYTHON : /usr/local/bin/python3.10
+최하단에 추가할 수 있는 항목에 아래 내용 추가
+YARN_CONF_DIR : /work/spark32/yarn-conf
+1.3 spark 3.2 다운로드 및 설치
+zeppelin은 spark3.3과 버전 호환성이 맞지 않아 3.2로 다운그레이드 한다.
+
+다운로드 사이트
+
+다운로드
+
+wget https://dlcdn.apache.org/spark/spark-3.2.2/spark-3.2.2-bin-hadoop3.2.tgz
+압축 해제
+
+tar xvfz spark-3.2.2-bin-hadoop3.2.tgz
+이름 변경
+
+mv spark-3.2.2-bin-hadoop3.2 spark3.
+2. 데이터프레임과 spark sql
+DataFrame 공식문서
+Spark SQL api reference
+3. 네트워크 재설정 (필요한 분만)
+ip 확인
+ip addr
+hosts파일 수정
+sudo vi /etc/hosts
+각 IP를 spark-master-01, spark-worker-01, spark-worker-02에 맞게 수정
+수정된 hosts 파일을 다른 노드에 복사
+sudo scp /etc/hosts spark-worker-01:/etc/
+sudo scp /etc/hosts spark-worker-02:/etc/
+windows hosts 파일 수정
+윈도우키 누르고 메모장을 우클릭 후 관리자 권한으로 실행
+파일 - 열기
+경로 : C:\Windows\System32\drivers\etc\hosts
+파일 형식을 텍스트에서 모든 파일로 바꿔야 파일이 보입니다.
+hosts 파일을 다음과 같이 수정하고 저장
+    해당 IP   spark-master-01
+    해당 IP   spark-worker-01
+    해당 IP   spark-worker-02
+재플린 예제 노트
+항공 데이터 관련 문제
+4. 서비스 관련 명령어 alias 지정하기
+vi ~/.bash_profile
+alias hds="/work/hadoop/sbin/start-all.sh"
+alias hdq="/work/hadoop/sbin/stop-all.sh"
+alias zps="/work/zeppelin/bin/zeppelin-daemon.sh start"
+alias zpq="/work/zeppelin/bin/zeppelin-daemon.sh stop"
+alias zpr="/work/zeppelin/bin/zeppelin-daemon.sh restart"
+.bash_profile 재설정
+source ~/.bash_profile
+5. 실습 예제 파일
+항공데이터 문제1
+6. DB 서버 구축
+maridb repository
+
+mariadb repo 파일 작성
+
+sudo vim /etc/yum.repos.d/MariaDB.repo
+   [mariadb]
+   name = MariaDB
+   baseurl = http://yum.mariadb.org/10.6/centos7-amd64
+   gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+   gpgcheck=1
+설치
+
+sudo yum install MariaDB-server MariaDB-client
+실행 및 서비스 등록
+
+sudo systemctl start mysql
+sudo systemctl enable mysql
+보안 관련 설정
+
+sudo /usr/bin/mariadb-secure-installation
+root 비밀번호만 잘 설정하고 나머진 y로
+인코딩 설정
+
+sudo vim /etc/my.cnf.d/server.cnf
+[mysqld]
+character-set-server=utf8mb4
+collation-server=utf8mb4_unicode_ci
+skip-character-set-client-handshake
+sudo vim /etc/my.cnf.d/mysql-clients.cnf
+[mysql]
+default-character-set = utf8mb4
+
+...
+
+[mysqldump]
+default-character-set = utf8mb4
+서비스 재시작
+
+sudo systemctl restart mysql
+유저 생성
+
+mysql -u root -p
+GRANT ALL PRIVILEGES ON *.* TO korea@'%' IDENTIFIED BY 'korea1234';
+spark sql jdbc
+
+spark sql JDBC To Other Databases 공식문서
+jdbc connector download 페이지
+Platform Independent -> TAR Archive download 버튼 우클릭 -> 링크 복사
+wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-8.0.30.tar.gz
+tar xvfz mysql-connector-java-8.0.30.tar.gz
+cp /home/spark/mysql-connector-java-8.0.30/mysql-connector-java-8.0.30.jar /work/spark32/jars/
+7. airflow meta db용 mysql 설치
+wget 설치
+sudo yum install wget -y
+MySQL 패키지 다운로드
+sudo rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
+sudo yum install http://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm
+sudo yum install mysql-community-server
+서비스 실행 및 등록
+sudo systemctl enable mysqld
+sudo systemctl start mysqld
+초기 비밀번호 확인
+sudo cat /var/log/mysqld.log
+접속 후 패스워드 변경
+ALTER USER 'root'@'localhost' IDENTIFIED BY '대문자숫자특수문자8자이상';
+FLUSH PRIVILEGES;
+8. airflow 설치 및 세팅
+airflow 설치
+sudo yum install epel-release -y
+sudo yum update
+sudo yum install -y python3-pip
+sudo pip3 install --upgrade pip
+sudo pip3 install apache-airflow
+setting MySQL Database Backend
+CREATE DATABASE airflow_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+- CREATE USER 'korea' IDENTIFIED BY 'Korea11!';
+- GRANT ALL PRIVILEGES ON airflow_db.* TO 'korea';
+airflow.cfg 설정 변경
+mysql+pymysql://korea:Korea11!@spark-worker-01:3306/airflow_db
+pymysql 설치
+pip3 install pymysql
+/etc/mysql/my.cnf 설정 변경
+		[mysqld] 
+    explicit_defaults_for_timestamp=1
+mysqld 재시작
+sudo systemctl restart mysqld;
+airflow 초기화
+airflow db init
+airflow 웹서버 켜기
+airflow webserver
+유저 생성
+airflow users create
+airflow users create --username admin --password admin --firstname admin --lastname admin --role Admin --email admin@example.org
+9. 에어플로우 실습
+에어플로우 공식문서
+에어플로우 아키텍처
+dags 폴더 생성
+mkdir -p ~/airflow/dags
+dags 폴더로 이동
+cd ~/airflow/dags
+test_dag.py 생성
+vi ~/airflow/dags/test_dag.py
+파일 내용을 아래와 같이 작성
+from datetime import datetime, timedelta
+from textwrap import dedent
+
+# The DAG object; we'll need this to instantiate a DAG
+from airflow import DAG
+
+# Operators; we need this to operate!
+from airflow.operators.bash import BashOperator
+with DAG(
+    'my_dag',
+    # These args will get passed on to each operator
+    # You can override them on a per-task basis during operator initialization
+    default_args={
+        'depends_on_past': False,
+        'email': ['airflow@example.com'],
+        'email_on_failure': False,
+        'email_on_retry': False,
+        'retries': 1,
+        'retry_delay': timedelta(minutes=5),
+        # 'queue': 'bash_queue',
+        # 'pool': 'backfill',
+        # 'priority_weight': 10,
+        # 'end_date': datetime(2016, 1, 1),
+        # 'wait_for_downstream': False,
+        # 'sla': timedelta(hours=2),
+        # 'execution_timeout': timedelta(seconds=300),
+        # 'on_failure_callback': some_function,
+        # 'on_success_callback': some_other_function,
+        # 'on_retry_callback': another_function,
+        # 'sla_miss_callback': yet_another_function,
+        # 'trigger_rule': 'all_success'
+    },
+    description='A simple tutorial DAG',
+    schedule_interval='0/5 * * * *',
+    start_date=datetime(2022, 10, 5),
+    catchup=False,
+    tags=['example']
+) as dag:
+
+    # t1, t2 and t3 are examples of tasks created by instantiating operators
+    t1 = BashOperator(
+        task_id='start',
+        bash_command='echo start'
+    )
+
+    t2 = BashOperator(
+        task_id='running',
+        bash_command='echo task running.. '
+    )
+
+    t3 = BashOperator(
+        task_id='end',
+        bash_command='echo end'
+    )
+
+    t1 >> t2 >> t3
+airflow scheduler 실행
+airflow scheduler
+web ui(spark-worker-01:8080)에서 DAGs로 확인
+10. mysql의 데이터를 주기적으로 hdfs로 이관하기
+하둡 서비스 실행
+/work/hadoop/sbin/start-all.sh
+zeppelin 서버 실행
+/work/zeppelin/bin/zeppelin-daemon.sh start
+zeppelin에서 pyspark 코드 실행
+만일 safemode가 뜨면서 에러가 발생하면 다음 명령어를 spark-master-01에서 실행
+/work/hadoop/bin/hdfs dfsadmin -safemode forceExit
+test.py에 pyspark 코드 작성
+vi /work/py/exam/test.py
+아래와 같이 작성
+from pyspark.sql import SparkSession
+import pyspark.sql.functions as fn`
+import time
+
+spark = SparkSession \
+    .builder \
+    .appName("Python Spark SQL basic example") \
+    .config("spark.some.config.option") \
+    .getOrCreate()
+
+jdbcDF = spark.read \
+    .format("jdbc") \
+    .option("url", "jdbc:mysql://spark-master-01:3306") \
+    .option("dbtable", "t1.article") \
+    .option("user", "korea") \
+    .option("password", "korea1234") \
+    .load()
+
+
+result = jdbcDF.select("id", "title", "regDate")
+now = time.strftime('%Y%m%d%H%M%S')
+result.write.csv(f"/work/data/article_{now}.csv")
+spark-submit을 이용한 pyspark 코드 실행
+YARN_CONF_DIR=/work/spark32/yarn-conf /work/spark32/bin/spark-submit /work/py/exam/test.py --master yarn
+test_dag.py 파일의 task에 위 명령어 반영
+vi /home/spark/airflow/dags/test_dag.py
+아래와 같이 작성
+    from datetime import datetime, timedelta
+    from textwrap import dedent
+
+    # The DAG object; we'll need this to instantiate a DAG
+    from airflow import DAG
+
+    # Operators; we need this to operate!
+    from airflow.operators.bash import BashOperator
+    with DAG(
+        'my_dag',
+        # These args will get passed on to each operator
+        # You can override them on a per-task basis during operator initialization
+        default_args={
+            'depends_on_past': False,
+            'email': ['airflow@example.com'],
+            'email_on_failure': False,
+            'email_on_retry': False,
+            'retries': 1,
+            'retry_delay': timedelta(minutes=5),
+            # 'queue': 'bash_queue',
+            # 'pool': 'backfill',
+            # 'priority_weight': 10,
+            # 'end_date': datetime(2016, 1, 1),
+            # 'wait_for_downstream': False,
+            # 'sla': timedelta(hours=2),
+            # 'execution_timeout': timedelta(seconds=300),
+            # 'on_failure_callback': some_function,
+            # 'on_success_callback': some_other_function,
+            # 'on_retry_callback': another_function,
+            # 'sla_miss_callback': yet_another_function,
+            # 'trigger_rule': 'all_success'
+        },
+        description='A simple tutorial DAG',
+        schedule_interval='0/5 * * * *',
+        start_date=datetime(2022, 10, 5),
+        catchup=False,
+        tags=['example']
+    ) as dag:
+
+        # t1, t2 and t3 are examples of tasks created by instantiating operators
+        t1 = BashOperator(
+            task_id='start',
+            bash_command='echo start'
+        )
+        
+        my_cmd = "ssh spark-master-01 YARN_CONF_DIR=/work/spark32/yarn-conf /work/spark32/bin/spark-submit /work/py/exam/test.py --master yarn"
+        t2 = BashOperator(
+            task_id='running',
+            bash_command=my_cmd
+        )
+
+        t3 = BashOperator(
+            task_id='end',
+            bash_command='echo end'
+        )
+
+        t1 >> t2 >> t3
+11. 서버에 파이썬 앱 올리기
+도커 설치
+설치 공식 문서
+sudo yum install -y yum-utils
+sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+sudo yum install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
+sudo systemctl start docker
+sudo systemctl enable docker
+파이썬 앱 내려받기
+git 설치하기
+sudo yum install git
+repository에서 파이썬 앱 내려받기
+mkdir -p /work/project
+cd /work/project
+git init
+git pull https://github.com/chacha86/pybo.git
+파이썬 앱 실행해보기
+export FLASK_APP=pybo
+export FLASK_DEBUG=true
+sudo yum install python3-pip -y
+sudo pip3 install --upgrade pip
+sudo pip3 install flask
+sudo pip3 install pymysql
+flask run --host=0.0.0.0
+db 접속 정보 수정
+vi /work/project/pybo/config/db_info.py
+아래와 같이 수정
+host = 'spark-master-01'
+user = 'korea'
+passwd = 'korea1234'
+db = 'music'
+
+파이썬 앱 컨테이너로 만들기
+sudo docker pull python
+
+앱 이미지 생성
+
+vi /work/project/Dockerfile
+아래와 같이 작성
+FROM python
+WORKDIR /project
+
+RUN ["pip", "install", "flask"]
+RUN ["pip", "install", "pymysql"]
+
+ENV FLASK_APP pybo
+ENV FLASK_DEBUG true
+
+COPY . /project
+
+CMD ["flask", "run", "--host=0.0.0.0"]
+
+도커 이미지 빌드
+
+sudo docker build -t pybo:1.0 /work/project
+pybo 컨테이너 실행
+
+sudo docker run --name pybo -d -p 5000:5000 --rm pybo:1.0
+DB query 실행
+ DROP DATABASE music;
+
+ CREATE DATABASE music;
+
+ USE music;
+
+ CREATE TABLE `user` (
+   userno INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+   loginId VARCHAR(30) UNIQUE,
+   pass VARCHAR(30) NOT NULL,
+   username VARCHAR(30) NOT NULL,
+   sex TINYINT NOT NULL,
+   regDate DATETIME NOT NULL
+ );
+
+ CREATE TABLE `music` (
+   musicno INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+   title VARCHAR(30) UNIQUE,
+   artist VARCHAR(30) NOT NULL,
+   genre VARCHAR(30) NOT NULL,
+   playtime INT NOT NULL,
+   regDate DATETIME NOT NULL
+ );
+
+ CREATE TABLE `history` (
+   histno INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+   userno INT UNSIGNED NOT NULL,
+   musicno INT UNSIGNED NOT NULL,
+   regDate DATETIME NOT NULL
+ );
+kafka 설치 및 세팅
+spark-worker-01에서 세팅
+cd /work
+wget https://downloads.apache.org/kafka/3.2.3/kafka_2.13-3.2.3.tgz
+tar xvfz /work/kafka_2.13-3.2.3.tgz
+mkdir -p /work/kafka_2.13-3.2.3/zookeeper_data
+echo "1" > /work/kafka_2.13-3.2.3/zookeeper_data/myid
+vim /work/kafka_2.13-3.2.3/config/zookeeper.properties
+아래 내용을 수정 및 추가
+    dataDir=/work/kafka_2.13-3.2.3/zookeeper_data
+    
+    initLimit=5
+    syncLimit=2
+
+    server.1=spark-worker-01:2888:3888
+    server.2=spark-worker-02:2888:3888
+mkdir –p /work/kafka_2.13-3.2.3/kafka_logs
+vim /work/kafka_2.13-3.2.3/config/server.properties
+아래 내용을 수정
+    broker.id=1 
+    advertised.listeners=PLAINTEXT://spark-worker-01:9092
+    log.dirs=/work/kafka_2.13-3.2.3/kafka_logs 
+    delete.topic.enable=true 
+    auto.create.topics.enable=false 
+    zookeeper.connect=spark-worker-01:2181, spark-worker-02:2181
+scp -r /work/kafka_2.13-3.2.3 spark@spark-worker-02:/work/
+spark-worker-02에서 세팅
+echo "2" > /work/kafka_2.13-3.2.3/zookeeper_data/myid
+vim /work/kafka_2.13-3.2.3/config/server.properties
+아래 내용을 수정
+    broker.id=2 
+    advertised.listeners=PLAINTEXT://spark-worker-02:9092
+    log.dirs=/work/kafka_2.13-3.2.3/kafka_logs 
+    delete.topic.enable=true 
+    auto.create.topics.enable=false 
+    zookeeper.connect=spark-worker-01:2181, spark-worker-02:2181
+주키퍼 실행
+nohup /work/kafka_2.13-3.2.3/bin/zookeeper-server-start.sh /work/kafka_2.13-3.2.3/config/zookeeper.properties > /work/kafka_2.13-3.2.3/bin/nohup_zookeeper.out &
+카프카 실행
+nohup /work/kafka_2.13-3.2.3/bin/kafka-server-start.sh /work/kafka_2.13-3.2.3/config/server.properties > /work/kafka_2.13-3.2.3/bin/nohup_kafka.out &
+카프카 공식 문서
+공식문서
+Topic 생성
+새 토픽 생성
+/work/kafka_2.13-3.2.3/bin/kafka-topics.sh --create --topic test --partitions 2 --replication-factor 2 --bootstrap-server spark-worker-01:9092, spark-worker-02:9092
+topic 리스트 확인
+/work/kafka_2.13-3.2.3/bin/kafka-topics.sh --list --bootstrap-server spark-worker-01:9092, spark-worker-02:9092
+producer 생성
+/work/kafka_2.13-3.2.3/bin/kafka-console-producer.sh --broker-list spark-worker-01:9092, spark-worker-02:9092 -topic test
+consumer 생성
+/work/kafka_2.13-3.2.3/bin/kafka-console-consumer.sh --bootstrap-server spark-worker-01:9092, spark-worker-02:9092 --topic test
+파이썬 producer 만들기
+kafka-python 공식문서
+kafka-python 설치
+sudo pip3 install kafka-python
+메시지 프로듀서 프로그램 만들기
+파이썬 작업 폴더 생성
+mkdir -p /work/py
+파이썬 애플리케이션 작성
+vi /work/py/py_pro.py
+아래와 같이 작성
+    from kafka import KafkaProducer
+    from kafka.errors import KafkaError
+    import time
+
+    producer = KafkaProducer(bootstrap_servers=['spark-worker-01:9092','spark-worker-02:9092'], api_version=(0,11,5))
+
+    i = 1
+    msg = 'num'
+    for _ in range(100):
+        rmsg = msg + str(i)
+        producer.send('test', rmsg.encode("utf-8"))
+        producer.flush()
+        time.sleep(1)
+        i += 1
+
+스파크 카프카 consumer 생성
+spark kafka 공식문서
+spark structed streaming 공식문서
+spark_yarn 인터프리터 설정
+spark.jars.packages : org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0
+spark-master-01에서 zeppelin 서버 재시작
+카프카 데이터스트림 읽고 쓰기
+관련 문서
+
+카프카 토픽에서 읽어오기
+
+    %spark_yarn.pyspark
+
+    sdf = spark \
+      .readStream \
+      .format("kafka") \
+      .option("kafka.bootstrap.servers", "spark-worker-01:9092,spark-worker-02:9092") \
+      .option("subscribe", "test") \
+      .load()
+
+    sdf = sdf.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
+메모리에 쓰기
+
+    %spark_yarn.pyspark
+
+    mdf = sdf.writeStream \
+      .format("memory") \
+      .queryName("test") \
+      .start()
+
+스트림 종료
+mdf.stop()
+메모리에 저장된 스트림 읽어오기
+
+spark.sql("select * from test").show(100)
+파일로 쓰기
+
+    %spark_yarn.pyspark
+
+    fdf = sdf.selectExpr("CAST(value AS STRING)") \
+        .writeStream \
+        .format("text") \
+        .option("kafka.bootstrap.servers", "spark-worker-01:9092,spark-worker-02:9092") \
+        .option("checkpointLocation", "/work/data/stream_test_chk2") \
+        .option("path", "/work/data/stream_test2") \
+        .start()
+
+카산드라, 레디스 설치
+카산드라 설치(spark-worker-01)
+다운로드
+
+cd /work
+wget https://dlcdn.apache.org/cassandra/4.0.6/apache-cassandra-4.0.6-bin.tar.gz
+tar xvfz apache-cassandra-4.0.6-bin.tar.gz
+설정
+
+vi /work/apache-cassandra-4.0.6/conf/cassandra.yaml
+seeds : "spark-worker-01:7000"
+listen_address: spark-worker-01
+rpc_address: spark-worker-01
+시작
+
+/work/apache-cassandra-4.0.6/bin/cassandra
+ps -ef | grep CassandraDaemon
+netstat -nap | grep 9042
+인터프리터 설정
+
+spark_yarn 인터프리터 설정
+spark.jars.packages : com.datastax.spark:spark-cassandra-connector_2.12:3.2.0 # 카산드라 api
+spark.cassandra.connection.host : spark-worker-01 # 카산드라 호스트 정보
+spark.sql.extensions : com.datastax.spark.connector.CassandraSparkExtensions # rdd가 아닌 df로 카산드라 사용 가능
+spark.sql.catalog.mycatalog : com.datastax.spark.connector.datasource.CassandraCatalog # 카산드라 메타 정보를 스파크로 읽을 수 있게
+spark - cassandra 테스트
+읽어오기
+%spark_yarn.pyspark
+data = spark.read.format("org.apache.spark.sql.cassandra")
+.options(table="test", keyspace="myspace").load()
+레디스 설치(spark-worker-02)
+다운로드
+
+cd /work
+sudo yum install -y wget
+wget https://github.com/redis/redis/archive/7.0.5.tar.gz
+tar xvfz 7.0.5.tar.gz
+빌드
+
+cd /work/redis-7.0.5
+make distclean
+sudo yum install gcc
+cd deps
+sudo make hiredis jemalloc linenoise lua
+cd /work/redis-7.0.5/deps/hdr_histogram/
+sudo make libhdrhistogram.a
+cd /work/redis-7.0.5
+sudo make install
+설정
+
+vi /work/redis-7.0.5/redis.conf
+protected-mode no
+bind spark-worker-02 -::1
+시작
+
+cd /work/redis-7.0.5
+nohup ./src/redis-server ./redis.conf > nohup_redis-server.out &
+tail -f nohup_redis-server.out
+ps -ef | grep redis
+테스트
+
+cd /work/redis-7.0.5
+./src/redis-cli -h spark-worker-02
+ping
+set foo bar
+get foo
+keys *
+flushdb
+get foo
+keys *
+인터프리터 설정
+
+spark.jars.packages : com.redislabs:spark-redis_2.12:3.1.0
+spark.redis.host : spark-worker-02
+spark.redis.port : 6379
+테스트
+
+redis 공식 문서 블로그
+- https://redis.com/blog/getting-started-redis-apache-spark-python/
+실습환경 조정
+가상머신 메모리 확장
+버추얼박스에서 해당 머신 선택후 우클릭 - 설정 - 시스템 - 기본메모리 3124로 세팅
+각 머신에 파이썬 3.10 설치
+python 3.10 버전 tar 다운로드 링크
+sudo yum groupinstall 'Development Tools' -y
+sudo yum install openssl-devel bzip2-devel libffi-devel wget -y
+wget https://www.python.org/ftp/python/3.10.8/Python-3.10.8.tgz
+tar xvfz Python-3.10.8.tgz
+cd Python-3.10.8
+./configure --enable-optimizations
+sudo make altinstall
+최신 파이썬 설치 - 외부 문서
+실습을 위한 저장소 확보
+이전 실습데이터인 airline_on_time 데이터 삭제
+/work/hadoop/bin/hdfs dfs -rm -r -f /work/data/airline_on_time
+hdfs 켤 때 safe모드 켜진것 끄기
+/work/hadoop/bin/hdfs dfsadmin -safemode forceExit
+데이터 테스트
+데이터 프레임 생성
+스파크 데이터 프레임 생성
+카산드라 테스트
+카산드라 공식문서
+스키마 생성
+CREATE KEYSPACE myspace WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1};
+
+USE myspace;
+
+CREATE TABLE user_data (firstname text, middlename text, lastname text, id int, gender text, salary int, PRIMARY KEY (id));    
+
+DROP TABLE user_data;
+
+저장
+    data2.write.format("org.apache.spark.sql.cassandra").options(table="user_data", keyspace="myspace").mode("append").save()
+읽기
+    df2 = spark.read.format("org.apache.spark.sql.cassandra").options(table="user_data", keyspace="myspace").load()
+레디스 테스트
+저장
+    df.write.format("org.apache.spark.sql.redis").option("table", "user_data").option("key.column", "id").save()
+읽기
+    df = spark.read.format("org.apache.spark.sql.redis").option("table", "user_data").option("key.column", "id").load()
+    df.show()
+학습데이터 준비
+다운로드
+mkdir -p /work/data/music
+cd /work/data/music
+wget https://storage.googleapis.com/aas-data-sets/profiledata_06-May-2005.tar.gz
+tar xvfz profiledata_06-May-2005.tar.gz
+rm -rf /work/data/music/profiledata_06-May-2005.tar.gz
+하둡에 업로드
+/work/hadoop/bin/hdfs dfs -put -f /work/data/music /work/data/
+/work/hadoop/bin/hdfs dfs -ls /work/data/music/profiledata_06-May-2005
+데이터 개요
+user_artist_data.txt
+음악 플레이 카운트 정보.
+userid : 유저 아이디
+artistid : 아티스트 아이디
+playcount : 재생 횟수
+artist_data.txt
+아티스트 정보
+artistid : 아티스트 아이디
+artistname : 아티스트 이름
+artist_alias.txt
+잘못된 아티스트 아이디
+badid : 잘못 기입된 아이디
+goodid : 올바른 아이디
+데이터 전처리
+음악 플레이 카운트 데이터 불러오고 전처리
+작업 코드 (
+
+음악 플레이 카운트 데이터 불러오고 전처리
+평문 데이터 불러오기. 구분자가 " "(공백)임을 확인
+
+import pyspark
+
+df1 = spark.read.text("/work/data/music/profiledata_06-May-2005/user_artist_data.txt")
+
+구분자를 이용해 구조화해서 가져오기
+
+자주 사용될 것을 고려해 메모리에 캐싱하기
+
+import pyspark
+
+df2 = spark.read.option("sep", " ").csv("/work/data/music/profiledata_06-May-2005/user_artist_data.txt").toDF("userid", "artistid", "playcount")
+df2.persist(pyspark.StorageLevel.MEMORY_AND_DISK) 
+
+# action 함수 하나 사용해야함.
+df2.count()
+df2의 통계정보 확인
+
+데이터의 형이 이상한 것을 확인
+
+df2.summary().show()
+올바른 데이터 확인을 위해 형변환한 후에 통계 정보 확인
+
+df2 = df2.select(df2.userid.cast("int"), df2.artistid.cast("int"), df2.playcount.cast("int"))
+df2.summary().show()
+플레이 카운트의 값이 평균에 비해 max값이 매우 크다. 이상데이터(아웃라이어)임을 확인하고 제거하기
+
+df2 = df2.select(df2.userid.cast("int"), df2.artistid.cast("int"), df2.playcount.cast("int"))
+df2.summary().show()
+IQR을 이용해 아웃라이어 제거하기
+
+q1 = df2.approxQuantile("playcount", [0.25], 0.15)[0]
+q2 = df2.approxQuantile("playcount", [0.75], 0.15)[0]
+
+
+IQR = (q2 - q1) * 1.5
+
+lowest = q1 - IQR
+highest  = q2 + IQR
+
+df3 = df2.filter((df2.playcount.cast("double") >= lowest) & (df2.playcount.cast("double")<= highest))
+df3.persist(pyspark.StorageLevel.MEMORY_ONLY) 
+이상치 제거된 데이터를 이용해 summary
+
+%spark_yarn.pyspark
+df3.summary().show()
+결측치 확인
+
+df3.filter(df3.userid.isNull() | df3.artistid.isNull() | df3.playcount.isNull()).count()
+최종데이터 캐싱
+
+user_artist_data = df3
+user_artist_data.persist()
+df2.unpersist()
+user_artist_data.count()
+
+
+)
+아티스트 데이터 불러오고 전처리
+
+
+(
+
+아티스트 데이터 불러오고 전처리
+평문 데이터 불러오기. 구분자가 "\t"(TAB)임을 확인
+df1 = spark.read.text("/work/data/music/profiledata_06-May-2005/artist_data.txt")
+df1.show()
+df1.printSchema()
+구분자를 이용해 데이터프레임화하고 캐싱
+%spark_yarn.pyspark
+df2 = spark.read.option("sep", "\t").csv("/work/data/music/profiledata_06-May-2005/artist_data.txt").toDF("artistid", "artistname")
+df2.persist() 
+df2.count()
+결측치 확인 및 제거
+%spark_yarn.pyspark
+df2.filter(df2.artistid.isNull() | df2.artistname.isNull()).count()
+df3 = df2.filter((df2.artistid.isNotNull()) & (df2.artistname.isNotNull()))
+다시 summary, artistid에 문자 데이터 있는 것 확인
+%spark_yarn.pyspark
+df3.summary().show()
+
+문자 데이터 제거
+%spark_yarn.pyspark
+from pyspark.sql.functions import *
+from pyspark.sql.types import *
+
+def is_my_digit(string) :
+    if string == None :
+        return False
+    if string.isdigit() :
+        return True
+    return False
+
+my_digit = udf(is_my_digit, BooleanType())
+df4 = df3.filter(my_digit(df3.artistid))
+형변환 및 최종 데이터 캐싱
+%spark_yarn.pyspark
+
+df5 = df4.select(
+    df4.artistid.cast("int"),
+    df4.artistname
+)
+
+artist_data = df5
+df2.unpersist()
+artist_data.persist()
+artist_data.count()
+
+
+
+)
+배드아이디/굿아이디 데이터 불러오고 전처리
+(
+배드아이디/굿아이디 데이터 불러오고 전처리
+평문 데이터 불러오기. 구분자가 "\t"(공백)임을 확인
+
+%spark_yarn.pyspark
+
+df1 = spark.read.text("/work/data/music/profiledata_06-May-2005/artist_alias.txt")
+df1.show()
+df1.printSchema()
+
+구분자를 이용해 구조화해서 가져오기
+
+자주 사용될 것을 고려해 메모리에 캐싱하기
+
+%spark_yarn.pyspark
+df2 = spark.read.option("sep", "\t").option("inferSchema", True).csv("/work/data/music/profiledata_06-May-2005/artist_alias.txt").toDF("badid", "goodid")
+df2.printSchema()
+df2.persist() 
+df2.count()
+df2의 통계정보 확인
+
+데이터의 형이 이상한 것을 확인
+
+%spark_yarn.pyspark
+df2.summary().show()
+전체데이터 - null데이터 개수 = badid 개수
+
+%spark_yarn.pyspark
+df2.count() - df2.filter(df2.badid.isNull()).count()
+null이 아닌 데이터만 필터링
+
+%spark_yarn.pyspark
+df3 = df2.filter(df2.badid.isNotNull())
+최종 데이터 캐싱
+
+%spark_yarn.pyspark
+
+artist_alias = df3
+df2.unpersist()
+artist_alias.persist()
+artist_alias.count()
+
+
+
+
+)
+음악 플레이 카운트 데이터의 배드아이디를 굿아이디로 바꾸기
+(
+
+음악 플레이 카운트 데이터의 배드아이디를 굿아이디로 바꾸기
+음악 플레이 카운트 데이터의 배드아이디를 찾기위해 join을 이용
+
+user_artist_data의 artistid중 badid인 것은 artist_alias의 badid와 연결하여 붙여주고 나머지는 원래 데이터 그대로 나오도록 left outer join을 이용.
+user_artist_data.show()
+artist_alias.show()
+
+joined_df = user_artist_data.alias("ua").join(artist_alias.alias("aa"), col("ua.artistid") == col("aa.badid"), "left_outer").filter(col("aa.badid").isNotNull())
+
+위 조인된 결과에서 CASE WHEN을 이용해 badid가 null인 것은 원래 artistid로, null이 아닌 것은 goodid로 선택하여 취합.
+
+%spark_yarn.pyspark
+
+joined_df2 = joined_df.select(
+    joined_df.userid,
+    when(joined_df.badid.isNull(), joined_df.artistid).otherwise(joined_df.goodid).alias("artistid"),
+    joined_df.playcount
+)
+badid였다가 goodid로 전환된 행들 중 겹치는 것이 있을 수 있음. 다음과 같이 확인
+
+%spark_yarn.pyspark
+joined_df2.groupby("userid", "artistid").count().filter(col("count") > 1).show()
+joined_df2.filter((joined_df2.userid == 2059903) & (joined_df2.artistid == 1811)).show()
+겹치는 데이터 다수 발견. 같은 행을 그룹핑해서 파편화된 playcount를 합해주고 저장.
+
+train_df = joined_df2.groupby("userid", "artistid").agg(
+sum(joined_df2.playcount).alias("playcount")
+)
+cassandra db에 저장.
+
+%spark_yarn.pyspark
+train_df.limit(80000).write.format("org.apache.spark.sql.cassandra").options(table="user_artist_data", keyspace="myspace").mode("append").save()
+cassandra db에서 읽기.
+
+   %spark_yarn.pyspark
+   train_df2 = spark.read.format("org.apache.spark.sql.cassandra").options(table="user_artist_data", keyspace="myspace").load()
+
+
+)
+Cassandra DB에 학습용 데이터 저장
+cassandra schema 만들기
+CREATE KEYSPACE myspace WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1};
+USE myspace;
+CREATE TABLE user_artist_data(userid int, artistid int, playcount int, PRIMARY KEY(userid, artistid));
+cassandra에 데이터 저장
+저장된 데이터 확인
+select * from user_artist_data;
+select count(*) from user_artist_data;
+Python 3.10과 pip 3.10 설치
+openssl 1.1.1 버전 설치
+sudo yum install epel-release
+sudo yum install openssl11 openssl11-devel
+openssl 버전 확인
+openssl11 version
+python3.10 버전 재설치
+기존 파이썬 삭제
+
+cd /usr/local/bin
+sudo rm -rf 2to3-3.10 idle3.10 pip3.10 pydoc3.10 python3.10 python3.10-config
+sudo rm -rf /usr/local/share/man/man1/python3.10.1
+sudo rm -rf /usr/local/lib/python3.10
+sudo rm -rf /usr/local/include/python3.10
+openssl 환경변수 세팅
+
+export CFLAGS=$(pkg-config --cflags openssl11)
+export LDFLAGS=$(pkg-config --libs openssl11)
+python 소스 빌드
+
+./configure --enable-optimizations
+sudo make && sudo make altinstall
+python 소스 빌드 중간에 실패했을 경우
+
+sudo make clean
+ALS 추천 알고리즘
+관련 포스팅
+spark ml 공식문서
+als 알고리즘 학습 예제 코드1_als 알고리즘 학습 - 재플린 노트
+als 알고리즘 학습 예제 코드2_머신러닝 파이프라인 구축
+als 알고리즘 학습 예제 코드3_파이프라인을 거쳐 나온 최적 모델 테스트 및 저장 - 재플린 노트
+als 알고리즘 학습 예제 코드4_모델 불러와서 음악 추천 받기 - 재플린 노트
+als 알고리즘 학습 예제 코드5_추천 목록의 artistid를 artist_data와 조인하기 - 재플린 노트
+als 알고리즘 학습 예제 코드6_결과 데이터 변형하고 Redis에 저장 - 재플린 노트
+실습 목표
+hdfs에서 음악 추천용 데이터 처리 playcount가 20 이상인 항목들만 학습데이터로 추리기 (데이터 전처리 부분 참고)
+카산드라 DB에 10만건 저장 (cassandra 저장 및 읽기)
+카산드라 DB에서 훈련용 데이터 불러와서 학습용데이터와 테스용데이터 7 : 3을 나누기 (df.randomSplit)
+crossValidator(머신러닝 파이프라인)을 이용해 학습 (Pipeline, Evaluator, ParamGrid)
+하이퍼 파라미터는 2개씩만
+베스트 모델 불러와서 학습용 데이터로 학습시키기 (fit)
+모델 저장 (write)
+모델 불러와서 모든 유저별 추천목록을 5개 받기 (load, recommendForUserSubset)
+추천 목록을 join을 위해서 목록결과가 array로 되어 있는 것을 행으로 풀기 (collect_list)
+user_artist_data와 artist_data를 조인해서 이름 연결 (join)
+조인된 결과를 각 유저별 아티스트행을 하나의 로우로 합치기 (array_join)
+합친 결과를 redis에 저장 (Redis 저장 및 읽기)
+git 최신 버전 설치
+git 최신 패키지 등록 repo
+sudo yum install http://opensource.wandisco.com/centos/7/git/x86_64/wandisco-git-release-7-1.noarch.rpm
+구버전 git 설치되어 있으면 삭제
+sudo yum remove git
+최신 버전 git 설치
+sudo yum install git -y
+버전 확인
+git --version
+github 가입
+google drive 가입
+git 간단 테스트
+git 테스트 폴더 생성
+mkdir git-test
+git 테스트 폴더로 이동
+cd git-test
+git 초기화
+git init
+git 상태 보기
+git status
+특정 파일을 스테이징하기
+git add a.txt
+git 사용자 등록
+git config --global user.email "email"
+git config --global user.name "nickname"
+파일 git저장소에 커밋하기
+git commit -m "a.txt first commit"
+그동안 commit 했던 내역들(백업본들) 보기
+git log
+특정 버전으로 되돌리기
+git checkout 커밋번호
+최신 버전으로 돌아가기
+git checkout master
+원격 저장소에 반영하기
+git push 원격저장소주소 브랜치
+DVC 설치
+DVC 설치 문서
+
+DVC 구글드라이브 설정
+
+설치
+
+기존의 파이썬3 삭제
+sudo yum remove python3-pip
+파이썬 3.10을 파이썬3으로 등록
+sudo ln -s /usr/local/bin/python3.10 /usr/bin/python3
+pip 업그레이드
+pip3 install --upgrade pip
+dvc 최신 버전 설치
+pip3 install dvc
+dvc 버전 확인
+dvc --version
+sqlite3 설치
+sudo yum install sqlite-devel -y
+python3.10 recompile
+cd /work/Python3.10.6
+sudo make && sudo make altinstall
+dvc 원격 저장소 설정
+
+dvc remote add -d mydata gdrive://<GOOGLE_DRIVE_FOLDER_ID>
+git add .dvc/config
+git commit -m "add dvc config"
+pip3 install dvc[gdrive]
+MLflow 설치 및 개요
+mlflow 공식문서
+설치
+mkdir /work/mlflow-test
+cd /work/mlflow-test
+pip3 install mlflow
+mlflow --version
+주피터 노트북 설치 및 코드 실행
+공식문서
+설치
+pip3 install jupyterlab
+주피터 노트북 서버 실행
+cd /work/mlflow-test
+jupyter notebook --ip spark-master-01
+서버 실행 후 나오는 http://spark-master-01:8888/?token=830be92720aaaaaaf717363c7358bc50ac3efd213fe45052 (여러분의 컴퓨터에서 출력되는 걸 쓰셔야 됩니다. 복붙하지 마세요.)를 크롬 브라우저 주소창에 넣어서 web ui 실행
+notebook 생성 후 mlflow example 코드 복사
+우측 상단 쪽에 New 버튼을 누르고 Python 3 (ipykernel)을 선택해 노트 생성
+mlflow example code 코드 복사
+추가 모듈 설치
+pip3 install numpy
+pip3 install pandas
+pip3 install matplotlib
+pip3 install sklearn
+MLflow UI 확인
+MLflow ui 서버 실행
+mlflow ui -h spark-master-01
+실행 후 나오는 http://192.168.100.226:5000 (6390)로 크롬브라우저로 접속 (ip는 여러분의 ip를 쓰셔야 합니다. 복붙하지 마세요. 아니면 spark-master-01로 해도 됩니다.)
+학습용 파이썬 코드 작성
+vi train_test.py
+mlflow example code 코드를 train_test.py에 복사
+다양한 방법으로 여러번 실행
+python3 train_test.py 0.03 0.03
+python3 train_test.py 0.01 0.01
+python3 train_test.py 0.07 0.09
+MLflow ui에서 각 학습에 대한 기록 확인
+dvc와 mlflow 함께 사용하기
+dvc.api 문서
+scipy sparse로 희소행렬 만들기
+scipy.sparse 공식문서
+implicit api reference
+implicit als 학습 예제 코드 - 모델 훈련 및 평가
+pybo 컨테이너 호스트 추가하여 실행
+sudo docker run --name pybo -d -p 5000:5000 --rm --add-host spark-master-01:192.168.100.226 pybo:1.0
+implicit als 학습 예제 코드 - 추천 목록 mysql로 저
