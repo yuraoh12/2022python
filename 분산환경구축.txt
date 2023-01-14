@@ -1,0 +1,310 @@
+
+버추얼 박스
+해당 링크로 버추얼 박스를 다운로드 받아 설치
+버추얼 머신이란?
+하나의 물리적인 컴퓨터에서 자원을 분할하여 가상(소프트웨어적으로)으로 여러 컴퓨터를 만들어 사용하는 것.
+centos7 다운로드
+해당 링크에서 CentOS-7-x86_64-Minimal-2009.iso를 다운로드
+centos7 이란?
+운영체제의 하나로 무료이며 특정 서비스를 목적으로 많이 사용되는 서버용 OS
+여기서는 분산환경을 구축하는 컴퓨터들의 소프트웨어를 설치하기 위한 용도로 사용됨
+1. 랜카드 켜기
+vi /etc/sysconfig/network-scripts/ifcfg-enp0s3
+
+해당 명령어는 리눅스에서 네트워크를 사용할 수 있도로 네트워크 장비를 켜주는 명령어
+putty download
+
+putty 는 원격으로 리눅스에 접속하여 리눅스를 제어할 수 있는 원격터미널 프로그램.
+버추얼박스보다는 putty를 이용하는게 훨신 작업이 수월하다.
+2. 유저생성 및 작업 폴더 생성
+유저 생성
+아래 명령어를 이용해 리눅스에 계정을 추가. 리눅스는 여러 계정을 생성하여 여러 사용자가 동시에 사용 가능하다.
+sudo useradd -G wheel spark
+passwd spark
+비밀번호 spark로 설정
+su spark
+sudo mkdir /work
+sudo chown spark:spark /work
+3. 나노 에디터 설치
+리눅스에서 파일을 편집하려면 편집기가 필요. 편집기 프로그램은 다양하나 여기서는 가장 접근성이 쉬운 nano 에디터를 사용한다.
+
+아래와 같은 명령어로 nano에디터를 설치하고 사용한다.
+
+sudo yum install -y nano
+주요 단축키 :
+
+저장 : 컨트롤 + O
+나가기 : 컨트롤 + X
+복사하기 : 컨트롤 + 쉬프트 + insert
+붙여넣기 : 컨트롤 + insert
+4. 호스트 설정
+각 컴퓨터의 네트워크 주소를 IP로 접근하게 되는데 IP는 사람이 이해하기 어려운 숫자형식이므로 사람이 이해하기 쉬운 문자 형태로 바꿔야 한다. 각 컴퓨터에 별명을 지어준다고 생각하면 편함.
+아래 명령어를 이용해 각 컴퓨터가 네트워크 상에서 사용할 자신의 별명을 설정한다.
+서버 3대 각각
+sudo hostnamectl set-hostname spark-master-01
+sudo hostnamectl set-hostname spark-worker-01
+sudo hostnamectl set-hostname spark-worker-02
+sudo nano /etc/hosts를 열어 아래와 같이 작성한다.
+ip spark-master-01
+ip spark-worker-01
+ip spark-worker-02
+5. ssh key 등록
+여러 리눅스 운영체제가 서로 네트워크 통신을 하기 위해서는 IP와 비밀번호를 입력해야 함.
+여러 컴퓨터를 하나로 엮어 네트워크로 통신하는 분산환경 상에서 매번 비밀번호를 물어보는 것은 시스템을 유지하는데 방해가 될 수 있음.
+따라서 암호화된 특수문자를 송수신하여 서로를 식별하는 방식으로 비밀번호를 대체할 수 있음.
+아래와 같은 명령어로 키 생성
+ssh-keygen -t rsa -f ~/.ssh/id_rsa
+ls -al ~/.ssh
+cat ~/.ssh/id_rsa.pub
+cat ~/.ssh/id_rsa
+6. authorized_keys 등록
+authorized_keys에는 다른 리눅스의 공개키를 등록하여 비밀번호 없이 접근 가능한 리눅스 머신을 등록할 수 있음.
+아래와 같은 명령어로 타 리눅스의 암호키를 등록해야함
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+cat ~/.ssh/authorized_keys
+nano ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+sudo systemctl restart sshd
+7. 아파치 Spark 설치 및 세팅
+7.1 spark 다운로드 링크
+Spark 다운로드
+7.2 linux에서 spark를 다운로드 받기 위해 wget 설치
+wget 설치
+sudo yum install wget -y
+7.3 wget을 이용해 spark를 다운로드 받고 압축해제. 폴더이름을 간편한 이름으로 바꾸기
+spark tar 파일 다운로드
+cd /work
+wget https://dlcdn.apache.org/spark/spark-3.3.0/spark-3.3.0-bin-hadoop3.tgz --no-check-certificate
+mv spark-3.3.0-bin-hadoop3 spark3
+7.4 스파크를 실행하기 위해서는 JAVA를 설치해야함. JAVA 설치
+jdk8 다운로드 링크
+
+openjdk8
+wget으로 jdk8 다운로드
+
+wget https://github.com/ojdkbuild/contrib_jdk8u-ci/releases/download/jdk8u322-b06/jdk-8u322-ojdkbuild-linux-x64.zip
+혹시 spark/bin에서 다운로드 받았다면 work로 파일 이동
+mv jdk-8u322-ojdkbuild-linux-x64.zip /work
+cd /work
+.zip파일의 압축을 풀기 위해 unzip 프로그램 설치
+
+sudo yum install unzip -y
+jdk 압축 풀고 이름 변경
+
+unzip jdk-8u322-ojdkbuild-linux-x64.zip
+mv jdk-8u322-ojdkbuild-linux-x64 jdk8
+7.5 설치된 자바의 경로를 spark 설정 파일에 기입
+설정이 망할 수도 있기 때문에 설정파일 원본에 직접 작성하지 않고 복사본을 만들어서 설정
+아래 명령어를 이용해 spark-env.sh.template 파일을 spark-env.sh로 복사
+cp /work/spark3/conf/spark-env.sh.template /work/spark3/conf/spark-env.sh
+spark-env.sh 설정 파일에 들어가서 최하단 부분에 아래 코드 작성
+JAVA_HOME=/work/jdk8
+7.6 spark 실행해보기
+./work/spark3/bin/spark-shell
+
+8. spark history 서버 구축
+8.1 jps를 쉽게 사용하기 위해 java path 설정해주기
+sudo nano ~/.bash_profile
+export PATH 바로 위에 PATH=$PATH:/work/jdk8/bin 작성
+source ~/.bash_profile
+8.2 history 서버 기동을 위한 설정
+spark 설정 폴더로 이동
+
+cd /work/spark3/conf
+spark-defaults.conf 파일 복사
+
+cp spark-defaults.conf.template spark-defaults.conf
+spark-defaults.conf 최하단에 아래와 같이 작성
+
+spark.eventLog.enabled true
+spark.eventLog.dir file:///work/spark3/history
+spark.history.fs.logDirectory file:///work/spark3/history
+history 폴더 생성
+
+mkdir -p /work/spark3/history
+history 서버 시작
+
+/work/spark3/sbin/start-history-server.sh
+jps 명령어로 history 서버가 잘 실행되고 있는지 확인
+
+jps
+8.3 history 서버 기동 후 web 인터페이스 확인
+히스토리 서버 웹 인터페이스 http://spark-master-01:18080에 접속해보기
+메모장을 관리자 권한으로 열기
+열기 -> c:/windows/system32/drivers/etc/hosts 파일 열기 (우측 하단에 텍스트문서(*.txt)를 모든파일로 바꿔야 함)
+해당 파일 최하단에 아래와 같이 입력
+192.168.100.210      spark-master-01
+192.168.100.213      spark-worker-01
+192.168.100.214      spark-worker-02
+저장한 후 윈도우에서 브라우저를 열고 주소창에 http://spark-master-01:18080 접속
+
+9. 파이선3 설치
+9.1 리눅스에 파이썬3 설치하기
+외부 문서
+
+sudo yum install openssl-devel bzip2-devel libffi-devel wget gcc
+/work/spark3 으로 경로 이동한 후 pyspark 실행
+
+cd /work/spark3
+/work/spark3/bin/pyspark
+9.2 pyspark로 spark 프로그래밍 해보기
+pyspark가 실행되면 아래와 같이 작성해본다.
+    rdd = sc.textFile("README.md") 
+    rdd_word = rdd.flatMap(lambda line : line.split(" ")) 
+    rdd_tuple = rdd_word.map(lambda word: (word, 1)) 
+    rdd_wordcount = rdd_tuple.reduceByKey(lambda v1, v2 : v1 + v2) 
+    arr_wordcount = rdd_wordcount.collect() 
+    for wc in arr_wordcount[:10] : 
+        print(wc) 
+
+10. 하둡
+10.1 분산 저장 시스템 하둡 설치하고 세팅
+하둡 다운로드 링크
+wget을 이용해 리눅스에 하둡 다운로드
+cd /work
+wget https://dlcdn.apache.org/hadoop/common/hadoop-3.3.4/hadoop-3.3.4.tar.gz --no-check-certificate
+혹시 /work에 다운로드 받지 않았다면
+mv hadoop-3.3.4.tar.gz /work/hadoop-3.3.4.tar.gz
+하둡 압축 풀기
+tar xvfz hadoop-3.3.4.tar.gz
+하둡 폴더 이름 변경
+mv hadoop-3.3.4 hadoop
+하둡 설정 파일 열기
+nano /work/hadoop/etc/hadoop/hadoop-env.sh
+파일 최하단에 아래와 같이 작성
+ export JAVA_HOME=/work/jdk8 
+core-site.xml
+nano /work/hadoop/etc/hadoop/core-site.xml
+<configuration> 
+    <property> 
+        <name>fs.defaultFS</name> 
+        <value>hdfs://spark-master-01:9000</value> 
+    </property> 
+</configuration> 
+hdfs-site.xml
+nano /work/hadoop/etc/hadoop/hdfs-site.xml
+<configuration> 
+    <property> 
+        <name>dfs.namenode.name.dir</name> 
+        <value>file:///work/hadoop/dfs/name</value> 
+    </property> 
+    <property> 
+        <name>dfs.datanode.data.dir</name> 
+        <value>file:///work/hadoop/dfs/data</value> 
+    </property> 
+    <property> 
+        <name>dfs.namenode.checkpoint.dir</name> 
+        <value>file:///work/hadoop/dfs/namesecondary</value> 
+    </property> 
+</configuration> 
+yarn-site.xml
+nano /work/hadoop/etc/hadoop/yarn-site.xml
+<configuration> 
+    <property> 
+        <name>yarn.resourcemanager.hostname</name> 
+        <value>spark-master-01</value> 
+    </property> 
+    <property> 
+        <name>yarn.resourcemanager.webapp.address</name> 
+        <value>spark-master-01:8188</value> 
+    </property> 
+</configuration>  
+workers
+nano /work/hadoop/etc/hadoop/workers
+spark-worker-01 
+spark-worker-02 
+10.2 설정 파일들을 다른 노드에 복사하기
+jdk8 복사
+
+sudo scp -r /work/jdk8 spark@spark-worker-01:/work/
+sudo scp -r /work/jdk8 spark@spark-worker-02:/work/
+hadoop 복사
+
+scp -r /work/hadoop spark@spark-worker-01:/work/
+scp -r /work/hadoop spark@spark-worker-02:/work/
+.bash_profile 복사
+
+scp -r ~/.bash_profile spark@spark-worker-01:~/
+scp -r ~/.bash_profile spark@spark-worker-02:~/
+spark-worker-01, 02 각각에서 아래 명령어 실행
+source ~/.bash_profile
+10.3 하둡 실행
+HDFS 포맷
+
+/work/hadoop/bin/hdfs namenode -format
+HDFS 시작
+
+/work/hadoop/sbin/start-dfs.sh
+HDFS WebUI 확인
+
+http://spark-master-01:9870
+만일 접속이 안된다면
+sudo systemctl stop firewalld로 방화벽을 꺼준다.
+sudo systemctl enable firewalld로 다시는 켜지지 않게 한다.
+파일시스템의 접근하기 위해 유저 설정하기
+
+nano /work/hadoop/etc/hadoop/core-site.xml
+<configuration> 
+    <property> 
+        <name>fs.defaultFS</name> 
+        <value>hdfs://spark-master-01:9000</value> 
+    </property> 
+    <property> 
+        <name>hadoop.http.staticuser.user</name> 
+        <value>spark</value> 
+    </property> 
+</configuration> 
+각 worker에 설정 파일 복사
+
+scp /work/hadoop/etc/hadoop/core-site.xml spark@spark-worker-01:/work/hadoop/etc/hadoop
+scp /work/hadoop/etc/hadoop/core-site.xml spark@spark-worker-02:/work/hadoop/etc/hadoop
+하둡 재시작
+
+/work/hadoop/sbin/stop-dfs.sh
+/work/hadoop/sbin/start-dfs.sh
+
+
+11.1 클러스터 매니저 yarn 설정 및 시작
+yarn 시작
+/work/hadoop/sbin/start-yarn.sh
+pyspark 로컬로 실행
+/work/spark3/bin/pyspark
+pyspark yarn으로 실행
+/work/spark3/bin/pyspark --master yarn
+spark용 yarn 설정 파일 생성
+mkdir -p /work/spark3/yarn-conf
+core-site.xml 설정
+nano /work/spark3/yarn-conf/core-site.xml
+<configuration> 
+    <property> 
+        <name>fs.defaultFS</name> 
+        <value>hdfs://spark-master-01:9000</value> 
+    </property> 
+</configuration> 
+yarn-site.xml 설정
+nano /work/spark3/yarn-conf/yarn-site.xml
+<configuration> 
+    <property> 
+        <name>yarn.resourcemanager.hostname</name> 
+        <value>spark-master-01</value> 
+    </property> 
+</configuration> 
+11.2 yarn을 이용한 spark 실행
+설정파일을 이용해서 yarn으로 pyspark 실행
+
+YARN_CONF_DIR=/work/spark3/yarn-conf /work/spark3/bin/pyspark --master yarn
+url redirect -> 8088 -> 8188로 바꾸면 됨
+
+yarn 웹사이트가 8188이라는 것을 스파크에게 알려주기
+yarn-site.xml에 추가 설정
+nano /work/spark3/yarn-conf/yarn-site.xml
+<configuration> 
+    <property> 
+        <name>yarn.resourcemanager.hostname</name> 
+        <value>spark-master-01</value> 
+    </property> 
+    <property> 
+        <name>yarn.resourcemanager.webapp.address</name> 
+        <value>spark-master-01:8188</value> 
+    </property> 
+</configuration>
